@@ -1,9 +1,9 @@
-from PyQt5.QtCore import pyqtSignal, Qt, QTimer
-from PyQt5.QtGui import QColor, QPalette, QPixmap, QGuiApplication
+from PyQt5.QtCore import QTimer
+from PyQt5.QtGui import QPixmap, QGuiApplication
 from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QStackedLayout, QWidget, QDialogButtonBox, QProgressBar
 
+from scanapp.widgets.sendapi import ApiSender
 import schwifty
-from PIL import Image, ImageChops
 
 from scanapp.widgets.base import exc
 from scanapp.widgets.message_dialog import MessageDialog
@@ -11,7 +11,7 @@ from scanapp.widgets.scanner_controller import ScannerController
 from scanapp.scanner_control import ScannerState
 from scanapp.stitcher import ScanCollector
 from scanapp.widgets.sendmail import MailSender, Attachment
-from scanapp.env import MAIL_TO
+from scanapp.env import SEND_TARGET
 
 
 
@@ -261,24 +261,23 @@ class ScanWidget(QWidget):
     def _send_mail(self, *_):
         images = self.scan_collector.get_all()
         self._show_status(self.SENDING_MAIL_TEXT, None)
-        mailer = MailSender(
+        if SEND_TARGET == "mail":
+            sender_cls = MailSender
+        elif SEND_TARGET == "api":
+            sender_cls = ApiSender
+        sender = sender_cls(
             self,
-            subject=f"Neue Rechnung von {self.name_input.text()}",
-            to_=MAIL_TO,
-            text=(
-                f"{self.name_input.text()} hat eine Rechnung einreicht:\n"
-                f"  Name: {self.name_input.text()}\n"
-                f"  Zweck: {self.purpose_input.text()}\n"
-                f"  IBAN: {self.iban_input.text()}\n"
-            ),
+            name=self.name_input.text(),
+            purpose=self.purpose_input.text(),
+            iban=self.iban_input.text(),
             attachments=[
                 Attachment(name=f"scan_{idx}.jpg", mime_main="image", mime_sub="jpeg", data=img)
                 for idx, img in enumerate(images)
             ],
         )
-        mailer.done.connect(self._show_scanner)
-        mailer.failure.connect(self._mail_failure)
-        mailer.start()
+        sender.done.connect(self._show_scanner)
+        sender.failure.connect(self._mail_failure)
+        sender.start()
 
     @exc
     def _mail_failure(self, msg: str, saved_path: str):

@@ -6,7 +6,7 @@ import datetime
 import smtplib
 
 from email.message import EmailMessage
-from scanapp.env import MAIL_FROM, MAIL_HOST, MAIL_PASSWORD, MAIL_PORT, MAIL_SSL, MAIL_START_TLS, MAIL_USER
+from scanapp.env import MAIL_FROM, MAIL_HOST, MAIL_PASSWORD, MAIL_PORT, MAIL_SSL, MAIL_TO, MAIL_START_TLS, MAIL_USER
 
 
 @dataclass
@@ -21,11 +21,15 @@ class MailSender(QThread):
     done = pyqtSignal()
     failure = pyqtSignal(str, str)
 
-    def __init__(self, parent, subject: str, to_: str, text: str, attachments: list[Attachment]):
+    def __init__(self, parent, name: str, purpose: str, iban: str, attachments: list[Attachment]):
         super().__init__(parent)
-        self.subject = subject
-        self.to_ = to_
-        self.text = text
+        self.subject = f"Neue Rechnung von {name}"
+        self.text = (
+            f"{name} hat eine Rechnung einreicht:\n"
+            f"  Name: {name}\n"
+            f"  Zweck: {purpose}\n"
+            f"  IBAN: {iban}\n"
+        )
         self.attachments = attachments
 
     @exc
@@ -38,7 +42,7 @@ class MailSender(QThread):
         # you == the recipient's email address
         msg['Subject'] = self.subject
         msg['From'] = MAIL_FROM
-        msg['To'] = self.to_
+        msg['To'] = MAIL_TO
         for attachment in self.attachments:
             msg.add_attachment(
                 attachment.data,
