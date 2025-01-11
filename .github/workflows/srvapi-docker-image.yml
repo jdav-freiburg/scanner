@@ -15,4 +15,5 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image
-      run: docker build ./srvapi --file srvapi.Dockerfile --tag scanner-srvapi:$(date +%s)
+      working-directory: ./srvapi
+      run: docker build . --file srvapi.Dockerfile --tag scanner-srvapi:$(date +%s)
