@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "scanapp"
+version = "1.0.0"
+description = ""
+authors = ["Lukas Vögtle"]
+license = "BSD-3-clause"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+rpi-gpio = "^0.7.1"
+smbus = "^1.1.post2"
+pyqt5 = "^5.15.11"
+schwifty = ">=2024.11.0"
+pillow = ">=11"
+opencv-python-headless = ">=4.10"
+
+[tool.poetry.scripts]
+scanapp = "scanapp.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
