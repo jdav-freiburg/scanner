@@ -18,7 +18,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build the Docker image
       working-directory: ./srvapi
-      run: docker build . --file srvapi.Dockerfile --tag ghcr.io/jdav-freiburg/scanner-srvapi:$(date +%y-%m-%d)
+      run: docker build . --file srvapi.Dockerfile --tag ghcr.io/jdav-freiburg/scanner-srvapi:$(date +%Y-%m-%d)
     - name: Push the Docker image
       working-directory: ./srvapi
-      run: docker push ghcr.io/jdav-freiburg/scanner-srvapi:$(date +%y-%m-%d)
+      run: docker push ghcr.io/jdav-freiburg/scanner-srvapi:$(date +%Y-%m-%d)
