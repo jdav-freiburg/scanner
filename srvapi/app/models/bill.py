@@ -1,7 +1,7 @@
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, Field
 
 
 class BillPayload(BaseModel):
-    name: constr(min_length=1, max_length=100)
-    purpose: constr(min_length=1, max_length=200)
-    iban: constr(regex=r"^[A-Z0-9]{15,34}$", description="Valid IBAN format")
+    name: str = Field(min_length=1, max_length=100)
+    purpose: str = Field(min_length=1, max_length=200)
+    iban: str = Field(pattern=r"^[A-Z0-9]{15,34}$", description="Valid IBAN format")

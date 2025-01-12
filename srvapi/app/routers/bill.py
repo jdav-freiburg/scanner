@@ -1,20 +1,20 @@
-from fastapi import APIRouter, Depends, UploadFile, Form
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, File, Response, UploadFile, Form
+from fastapi.exceptions import HTTPException
 from typing import List
 from app.models.bill import BillPayload
 from app.utils.auth import validate_api_key
-from app.utils.email import send_email
+from app.utils.email import send_email, Attachment
 
 
 router = APIRouter()
 
-@router.post("/upload", dependencies=[Depends(validate_api_key)])
+@router.post("/api/bill", dependencies=[Depends(validate_api_key)])
 async def upload_bill(
-    name: str = Form(...),
-    purpose: str = Form(...),
-    iban: str = Form(...),
-    files: List[UploadFile] = Form(...)
-) -> JSONResponse:
+    name: str = Form(),
+    purpose: str = Form(),
+    iban: str = Form(),
+    files: List[UploadFile] = File()
+) -> Response:
     """
     Handle bill uploads with API key validation.
     """
@@ -22,13 +22,20 @@ async def upload_bill(
     payload = BillPayload(name=name, purpose=purpose, iban=iban)
     
     # Process uploaded files
-    filenames = []
+    attachments = []
     for file in files:
-        content = await file.read()
-        filenames.append(file.filename)
-        # (Optional) Save or process the file here
+        attachments.append(Attachment(
+            name=file.filename,
+            mime_main=file.content_type.split('/', 1)[0],
+            mime_sub=file.content_type.split('/', 1)[1],
+            data=await file.read()
+        ))
+    
+    print(f"Sending {payload} with attachments: {', '.join(attachment.name for attachment in attachments)}")
 
-    # Example: Send an email with payload and filenames
-    await send_email(payload, filenames)
+    # Send the mail out
+    if not await send_email(payload, attachments):
+        raise HTTPException(status_code=500, detail="Could not send mail")
 
-    return JSONResponse(content={"message": "Bill uploaded successfully!"})
+    # Success
+    return Response(status_code=204)

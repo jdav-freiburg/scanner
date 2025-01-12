@@ -15,23 +15,22 @@ class ApiSender(QThread):
 
     def __init__(self, parent, name: str, purpose: str, iban: str, attachments: list[Attachment]):
         super().__init__(parent)
-        self.json_data = {
-            "name": name,
-            "purpose": purpose,
-            "iban": iban,
-        }
-        self.attachments = attachments
+        self.files = (
+            ("name", (None, name)),
+            ("purpose", (None, purpose)),
+            ("iban", (None, iban)),
+            *(
+                (attachment.name, (attachment.name, attachment.data, f"{attachment.mime_main}/{attachment.mime_sub}"))
+                for attachment in self.attachments
+            )
+        )
 
     @exc
     def run(self):
         r = requests.post(
             API_TARGET,
-            headers={"Api-Key": API_KEY},
-            json=self.json_data,
-            files={
-                attachment.name: (attachment.name, attachment.data, f"{attachment.mime_main}/{attachment.mime_sub}")
-                for attachment in self.attachments
-            },
+            headers={"X-Api-Key": API_KEY},
+            files=self.files
         )
         try:
             r.raise_for_status()
