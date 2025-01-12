@@ -14,6 +14,7 @@ This provides a ready docker container providing an api for sending mails coming
 - `MAIL_PORT`: The target smtp port (defaults to 25/587).
 - `MAIL_USER`: If not empty, use this user to login.
 - `MAIL_PASSWORD`: If not empty, use this password to login.
+- `API_KEY`: This must be equal to the X-Api-Key header from the client. Required.
 
 ### docker-compose
 
@@ -27,4 +28,5 @@ services:
       MAIL_HOST: "mailhost"
       MAIL_FROM: "account@example.com"
       MAIL_TO: "account@example.com"
+      API_KEY: "123456"
 ```

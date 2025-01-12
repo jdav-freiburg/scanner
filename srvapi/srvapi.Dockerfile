@@ -17,7 +17,7 @@ RUN poetry install --no-root --only main
 COPY app ./app
 
 # Expose the port that FastAPI will run on
-EXPOSE 8000
+EXPOSE 80
 
 # Command to run the FastAPI application
-CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
