@@ -3,7 +3,6 @@ from typing import Callable, Generator
 import subprocess
 import time
 import threading
-import selectors
 import os
 from enum import Enum
 

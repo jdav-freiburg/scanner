@@ -4,7 +4,7 @@ version = "1.0.0"
 description = ""
 authors = ["Lukas Vögtle"]
 license = "BSD-3-clause"
-readme = "README.md"
+readme = "Readme.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -13,6 +13,7 @@ smbus = "^1.1.post2"
 pyqt5 = "^5.15.11"
 schwifty = ">=2024.11.0"
 pillow = ">=11"
+requests = ">=2.32"
 opencv-python-headless = ">=4.10"
 
 [tool.poetry.scripts]

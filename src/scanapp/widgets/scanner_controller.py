@@ -1,12 +1,5 @@
-from PyQt5.QtCore import pyqtSignal, QThread, QWaitCondition, QMutex, QObject, QTimer
-from RPi import GPIO
-from scanapp.widgets.base import exc
+from PyQt5.QtCore import pyqtSignal, QObject
 from scanapp.scanner_control import ScannerState, ScannerControl
-from enum import Enum
-import subprocess
-import time
-import threading
-import selectors
 
 
 class ScannerController(QObject):
