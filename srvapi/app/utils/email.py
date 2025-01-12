@@ -53,7 +53,7 @@ async def send_email(payload: BillPayload, attachments: list[Attachment]) -> boo
         await smtp.connect()
         if MAIL_USER and MAIL_PASSWORD:
             await smtp.login(MAIL_USER, MAIL_PASSWORD)
-        await smtp.send_message(message=msg)
+        await smtp.send_message(msg)
         await smtp.quit()
     except Exception as e:
         print(f"Error sending email: {e}")
