@@ -7,13 +7,18 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
+    - uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build the Docker image
       working-directory: ./srvapi
-      run: docker build . --file srvapi.Dockerfile --tag scanner-srvapi:$(date +%s)
+      run: docker build . --file srvapi.Dockerfile --tag ghcr.io/jdav-freiburg/scanner-srvapi:$(date +%Y-%m-%d)
+    - name: Push the Docker image
+      working-directory: ./srvapi
+      run: docker push ghcr.io/jdav-freiburg/scanner-srvapi:$(date +%Y-%m-%d)
