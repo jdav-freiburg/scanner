@@ -11,7 +11,7 @@ from scanapp.widgets.scanner_controller import ScannerController
 from scanapp.scanner_control import ScannerState
 from scanapp.stitcher import ScanCollector
 from scanapp.widgets.sendmail import MailSender, Attachment
-from scanapp.env import SEND_TARGET
+from scanapp.env import DISABLE_IBAN_CHECK, SEND_TARGET
 
 
 
@@ -221,9 +221,9 @@ class ScanWidget(QWidget):
         try:
             schwifty.IBAN(self.iban_input.text())
         except schwifty.exceptions.SchwiftyException as e:
-            #self._input_failure(f"IBAN ungültig: {e}")
-            # return
-            pass
+            if not DISABLE_IBAN_CHECK:
+                self._input_failure(f"IBAN ungültig: {e}")
+                return
         if not self.scanner.can_scan():
             self._retry_startup()
         else:

@@ -1,4 +1,7 @@
-from PyQt5.QtGui import QImage
+try:
+    from PyQt5.QtGui import QImage
+except ImportError:
+    QImage = None
 from pathlib import Path
 import io
 from PIL import Image, ImageChops, ImageOps
@@ -78,7 +81,7 @@ class ScanCollector:
         diff = ImageChops.difference(img, calib)
         del calib
         diff = ImageOps.grayscale(diff)
-        diff = Image.eval(diff, lambda c: 0 if c < 16 else 255)
+        diff = Image.eval(diff, lambda c: 0 if c < 24 else 255)
         return Cropbox(*diff.getbbox())
 
     # def _cropbox(self, img: Image.Image) -> Cropbox:
@@ -244,9 +247,9 @@ def imshow(qimg):
 if __name__ == '__main__':
     from scanapp.env import SCREEN_RESOLUTION_HEIGHT, SCREEN_RESOLUTION_WIDTH
 
-    with open("last2.png", "rb") as rf:
+    with open("last_0.png", "rb") as rf:
         bytes1 = rf.read()
-    with open("last3.png", "rb") as rf:
+    with open("last_1.png", "rb") as rf:
         bytes2 = rf.read()
     # s = CropStitcher(bytes1)
     # s.append_image(bytes1)

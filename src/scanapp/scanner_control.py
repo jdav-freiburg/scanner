@@ -10,7 +10,7 @@ from enum import Enum
 PIN_ONOFF = 26
 PIN_BUTTON = 16
 PIN_PAPER = 19
-PIN_MOTOR_SLEEP = 12
+PIN_MOTOR_AWAKE = 12
 # 10min is default power saving timeout
 POWERSAVING_TIMEOUT = 10 * 60
 # About 4sec for booting from powerdown state
@@ -22,9 +22,7 @@ RESTART_DELAY = 1
 # Maximum duration for a scan, before the scanner needs an "end_paper of paper"
 SCAN_MAX_DURATION = 10.5
 # Time after starting the scan, when to enable the motor
-#MOTOR_WAKE_START_TIME = 1.85
-MOTOR_WAKE_START_TIME1 = 1.0
-MOTOR_WAKE_START_TIME2 = 0.8
+MOTOR_WAKE_START_TIME = 1.4
 # Time after starting the scan, when to disable the motor
 MOTOR_SLEEP_START_TIME = SCAN_MAX_DURATION + 0.2
 
@@ -186,11 +184,11 @@ class ScannerControl:
         GPIO.setup(PIN_ONOFF, GPIO.OUT)
         GPIO.setup(PIN_BUTTON, GPIO.OUT)
         GPIO.setup(PIN_PAPER, GPIO.OUT)
-        GPIO.setup(PIN_MOTOR_SLEEP, GPIO.OUT)
+        GPIO.setup(PIN_MOTOR_AWAKE, GPIO.OUT)
         GPIO.output(PIN_ONOFF, False)
         GPIO.output(PIN_BUTTON, False)
         GPIO.output(PIN_PAPER, False)
-        GPIO.output(PIN_MOTOR_SLEEP, False)
+        GPIO.output(PIN_MOTOR_AWAKE, False)
         self._waiter = Waiter()
         self._waiter2 = Waiter()
         self._sleep_timer = Timer(self._on_power_saving)
@@ -255,7 +253,7 @@ class ScannerControl:
         print("._power_on()")
         self._sleep_timer.stop()
         GPIO.output(PIN_ONOFF, True)
-        GPIO.output(PIN_MOTOR_SLEEP, True)
+        GPIO.output(PIN_MOTOR_AWAKE, True)
         self._set_state(ScannerState.StartingUp)
         self._waiter.delay(STARTUP_DURATION, self._on_powered_on)
         self._waiter2.delay(0.1, self._push_button)
@@ -265,7 +263,7 @@ class ScannerControl:
         self._sleep_timer.stop()
         self._waiter.stop()
         self._waiter2.stop()
-        GPIO.output(PIN_MOTOR_SLEEP, False)
+        GPIO.output(PIN_MOTOR_AWAKE, False)
         GPIO.output(PIN_ONOFF, False)
         GPIO.output(PIN_BUTTON, False)
         GPIO.output(PIN_PAPER, False)
@@ -301,7 +299,7 @@ class ScannerControl:
         no_paper = False
         res_data = b''
         start = time.time()
-        GPIO.output(PIN_MOTOR_SLEEP, False)
+        GPIO.output(PIN_MOTOR_AWAKE, False)
 
         t_barrier = threading.Barrier(6)
         t_process_signal = threading.Event()
@@ -326,13 +324,11 @@ class ScannerControl:
             t_barrier.wait()
             # It's now ready to start the sleep most "precisely"
             t_scanning_signal.wait()
-            t_abort.wait(1.4)
-            GPIO.output(PIN_MOTOR_SLEEP, True)
-            # t_abort.wait(1)
-            # GPIO.output(PIN_MOTOR_SLEEP, False)
-            # t_abort.wait(MOTOR_WAKE_START_TIME2)
-            # GPIO.output(PIN_MOTOR_SLEEP, True)
-            print(f"Motor=Sleep after {time.time()-start}sec")            
+            t_abort.wait(MOTOR_WAKE_START_TIME)
+            GPIO.output(PIN_MOTOR_AWAKE, True)
+            print(f"Motor=Awake after {time.time()-start}sec")
+            self._set_state(ScannerState.ScanRunning)
+            self.scanner_running()
 
         def stop_motor():
             # Synchronize the start
@@ -340,8 +336,8 @@ class ScannerControl:
             # It's now ready to start the sleep most "precisely"
             t_scanning_signal.wait()
             t_abort.wait(MOTOR_SLEEP_START_TIME)
-            GPIO.output(PIN_MOTOR_SLEEP, False)
-            print(f"Motor=Sleep after {time.time()-start}sec")            
+            GPIO.output(PIN_MOTOR_AWAKE, False)
+            print(f"Motor=Sleep after {time.time()-start}sec")
 
         def read_data_fn():
             nonlocal res_data
@@ -361,8 +357,6 @@ class ScannerControl:
                     start = time.time()
                     t_scanning_signal.set()
                     print("Scanner Start, start paper timeout")
-                    self._set_state(ScannerState.ScanRunning)
-                    self.scanner_running()
                 elif b'sane_close(' in line:
                     # Scanner has finished
                     print("Scanner Close")
