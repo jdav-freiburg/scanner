@@ -2,14 +2,13 @@
 name = "scanapp"
 version = "1.0.0"
 description = ""
-authors = ["Lukas Vögtle"]
+authors = ["Lukas Voegtle"]
 license = "BSD-3-clause"
 readme = "Readme.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-rpi-gpio = "^0.7.1"
-smbus = "^1.1.post2"
+rpi-lgpio = "^0.6"
 pyqt5 = "^5.15.9"
 schwifty = ">=2024.11.0"
 pillow = ">=11"
