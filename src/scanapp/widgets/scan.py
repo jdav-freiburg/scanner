@@ -304,7 +304,7 @@ class ScanWidget(QWidget):
             self,
             name=self.name_input.text(),
             purpose=self.purpose_input.text(),
-            iban=self.iban_input.text(),
+            iban=self.iban_input.text().upper(),
             attachments=[
                 Attachment(
                     name=f"scan_{idx}.jpg", mime_main="image", mime_sub="jpeg", data=img
