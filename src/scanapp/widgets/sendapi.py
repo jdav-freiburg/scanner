@@ -29,7 +29,7 @@ class ApiSender(QThread):
             ("iban", (None, iban)),
             *(
                 (
-                    attachment.name,
+                    "files",
                     (
                         attachment.name,
                         attachment.data,
