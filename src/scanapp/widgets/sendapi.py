@@ -60,3 +60,5 @@ class ApiSender(QThread):
                 with open(f"{filename_base}.{attachment.name}", "wb") as wbf:
                     wbf.write(attachment.data)
             self.failure.emit(str(e), filename_base)
+        else:
+            self.done.emit()
