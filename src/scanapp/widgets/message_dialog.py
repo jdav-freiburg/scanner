@@ -7,7 +7,13 @@ from scanapp.env import SCREEN_RESOLUTION_HEIGHT, SCREEN_RESOLUTION_WIDTH
 class MessageDialog(QDialog):
     MAIN_STYLE: str
 
-    def __init__(self, parent, title: str, message: str, buttons: QDialogButtonBox.StandardButton = QDialogButtonBox.StandardButton.Ok):
+    def __init__(
+        self,
+        parent,
+        title: str,
+        message: str,
+        buttons: QDialogButtonBox.StandardButton = QDialogButtonBox.StandardButton.Ok,
+    ):
         super().__init__(parent, Qt.WindowType.FramelessWindowHint)
         self.setWindowTitle(title)
 
@@ -17,13 +23,27 @@ class MessageDialog(QDialog):
         if buttons != 0:
             self.buttons = QDialogButtonBox(buttons, Qt.Orientation.Horizontal, self)
 
-            self.buttons.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.buttons.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            )
 
         vbox = QVBoxLayout(self)
-        vbox.addWidget(title_label, stretch=1, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        vbox.addWidget(message_label, stretch=1, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        vbox.addWidget(
+            title_label,
+            stretch=1,
+            alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter,
+        )
+        vbox.addWidget(
+            message_label,
+            stretch=1,
+            alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter,
+        )
         if buttons != 0:
-            vbox.addWidget(self.buttons, stretch=1, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
+            vbox.addWidget(
+                self.buttons,
+                stretch=1,
+                alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter,
+            )
 
         self.showFullScreen()
         self.setFixedSize(SCREEN_RESOLUTION_WIDTH, SCREEN_RESOLUTION_HEIGHT)

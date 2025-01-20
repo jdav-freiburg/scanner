@@ -6,7 +6,16 @@ import datetime
 import smtplib
 
 from email.message import EmailMessage
-from scanapp.env import MAIL_FROM, MAIL_HOST, MAIL_PASSWORD, MAIL_PORT, MAIL_SSL, MAIL_TO, MAIL_START_TLS, MAIL_USER
+from scanapp.env import (
+    MAIL_FROM,
+    MAIL_HOST,
+    MAIL_PASSWORD,
+    MAIL_PORT,
+    MAIL_SSL,
+    MAIL_TO,
+    MAIL_START_TLS,
+    MAIL_USER,
+)
 
 
 @dataclass
@@ -21,7 +30,9 @@ class MailSender(QThread):
     done = pyqtSignal()
     failure = pyqtSignal(str, str)
 
-    def __init__(self, parent, name: str, purpose: str, iban: str, attachments: list[Attachment]):
+    def __init__(
+        self, parent, name: str, purpose: str, iban: str, attachments: list[Attachment]
+    ):
         super().__init__(parent)
         self.subject = f"Neue Rechnung von {name}"
         self.text = (
@@ -40,9 +51,9 @@ class MailSender(QThread):
 
         # me == the sender's email address
         # you == the recipient's email address
-        msg['Subject'] = self.subject
-        msg['From'] = MAIL_FROM
-        msg['To'] = MAIL_TO
+        msg["Subject"] = self.subject
+        msg["From"] = MAIL_FROM
+        msg["To"] = MAIL_TO
         for attachment in self.attachments:
             msg.add_attachment(
                 attachment.data,
@@ -66,7 +77,7 @@ class MailSender(QThread):
         except Exception as e:
             os.makedirs("failed_mails", exist_ok=True)
             filename = f"failed_mails/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.eml"
-            with open(filename, 'wb') as wf:
+            with open(filename, "wb") as wf:
                 wf.write(msg.as_bytes())
             self.failure.emit(str(e), filename)
         self.done.emit()

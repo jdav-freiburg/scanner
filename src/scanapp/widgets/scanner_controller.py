@@ -44,7 +44,7 @@ class ScannerController(QObject):
     def shutdown(self):
         """Shuts down the scanner (asynchronously)."""
         return self.ctrl.shutdown()
-    
+
     def reset(self):
         return self.ctrl.reset()
 

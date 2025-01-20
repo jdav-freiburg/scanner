@@ -11,7 +11,7 @@ from scanapp.widgets.message_dialog import MessageDialog
 from scanapp.widgets.scan import ScanWidget
 
 
-STYLESHEET = (Path(__file__).parent / 'style.qss').read_text()
+STYLESHEET = (Path(__file__).parent / "style.qss").read_text()
 MessageDialog.MAIN_STYLE = STYLESHEET
 
 
@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
         # Set window properties
         self.setWindowTitle("Control")
         self.showFullScreen()  # Set the window to fullscreen mode
-        #self.setGeometry(0, 0, 320, 240)
+        # self.setGeometry(0, 0, 320, 240)
         self.setFixedSize(SCREEN_RESOLUTION_WIDTH, SCREEN_RESOLUTION_HEIGHT)
         self.setCursor(Qt.BlankCursor)
 

@@ -64,14 +64,14 @@ class Waiter:
                 f = self._f
                 self._f = None
             f()
-    
+
     def delay(self, t: float, f: Callable[[], None]):
         with self._lock:
             assert self._f is None, "Can only handle one parallel delay"
             self._to = t
             self._f = f
             self._e.notify()
-    
+
     def stop(self):
         with self._lock:
             assert self._f is None, "Can only handle one parallel delay"
@@ -111,13 +111,13 @@ class Timer:
                         break
                     continue
             self._f()
-    
+
     def start(self, t: float):
         with self._lock:
             self._to = t
             self._restart.notify()
             self._e.notify()
-    
+
     def stop(self):
         with self._lock:
             self._restart.notify()
@@ -139,8 +139,8 @@ def read_file_by_lines(f: int) -> Generator[bytes, None, None]:
         if not r:
             break
         buf.append(r)
-        if b'\n' in r:
-            lines = b''.join(buf).split(b'\n')
+        if b"\n" in r:
+            lines = b"".join(buf).split(b"\n")
             buf.clear()
             buf.append(lines[-1])
             yield from lines[:-1]
@@ -149,11 +149,11 @@ def read_file_by_lines(f: int) -> Generator[bytes, None, None]:
 def read_file_raw(f: int) -> bytes:
     buf = []
     while True:
-        r = os.read(f, 1024*64)
+        r = os.read(f, 1024 * 64)
         if not r:
             break
         buf.append(r)
-    return b''.join(buf)
+    return b"".join(buf)
 
 
 class ScannerControl:
@@ -192,7 +192,7 @@ class ScannerControl:
         self._waiter = Waiter()
         self._waiter2 = Waiter()
         self._sleep_timer = Timer(self._on_power_saving)
-    
+
     def startup(self):
         """
         (asynchronously)
@@ -212,7 +212,7 @@ class ScannerControl:
             print(".startup() -> noop")
             # It's already ready!
             self.scanner_ready()
-    
+
     def can_scan(self) -> bool:
         """Ensures that the scanner is ready and can scan now."""
         return self._state == ScannerState.Ready
@@ -221,7 +221,7 @@ class ScannerControl:
         """Shuts down the scanner (asynchronously)."""
         print(".shutdown()")
         self._power_off()
-    
+
     def end(self):
         print(".end()")
         self._waiter.shutdown()
@@ -242,7 +242,7 @@ class ScannerControl:
         print("._on_power_saving()")
         self._set_state(ScannerState.PowerSaving)
         self.scanner_shutdown()
-    
+
     def _on_powered_on(self, *_):
         print("._powered_on()")
         self._sleep_timer.start(POWERSAVING_TIMEOUT)
@@ -297,7 +297,7 @@ class ScannerControl:
         self.scanner_starting()
         jam = False
         no_paper = False
-        res_data = b''
+        res_data = b""
         start = time.time()
         GPIO.output(PIN_MOTOR_AWAKE, False)
 
@@ -305,6 +305,7 @@ class ScannerControl:
         t_process_signal = threading.Event()
         t_scanning_signal = threading.Event()
         t_abort = threading.Event()
+
         def end_paper():
             nonlocal start
             # Synchronize the start
@@ -345,19 +346,19 @@ class ScannerControl:
             t_barrier.wait()
             t_process_signal.wait()
             res_data = read_file_raw(read_data)
-        
+
         def read_info_fn():
             nonlocal no_paper, jam, start
             # Synchronize the start
             t_barrier.wait()
             t_process_signal.wait()
             for line in read_file_by_lines(read_info):
-                if b'sane_start(' in line:
+                if b"sane_start(" in line:
                     # Scanner is now starting, notify the thread
                     start = time.time()
                     t_scanning_signal.set()
                     print("Scanner Start, start paper timeout")
-                elif b'sane_close(' in line:
+                elif b"sane_close(" in line:
                     # Scanner has finished
                     print("Scanner Close")
                 elif b"Document feeder out of documents" in line:
@@ -382,7 +383,7 @@ class ScannerControl:
         print("Setting paper=True")
         GPIO.output(PIN_PAPER, True)
         time.sleep(0.5)
-        
+
         # Ensure thread is started
         print("Sync")
         t_barrier.wait()
@@ -392,7 +393,14 @@ class ScannerControl:
             read_info, write_info = os.pipe()
             # Scan
             with subprocess.Popen(
-                ["sudo", "chroot", "/opt/scanberryd-amd64/", "bash", "-c", f"SANE_DEBUG_DLL=255 scanimage --format=png --resolution={DPI}"],
+                [
+                    "sudo",
+                    "chroot",
+                    "/opt/scanberryd-amd64/",
+                    "bash",
+                    "-c",
+                    f"SANE_DEBUG_DLL=255 scanimage --format=png --resolution={DPI}",
+                ],
                 stdout=write_data,
                 stderr=write_info,
                 close_fds=True,
@@ -430,19 +438,19 @@ class ScannerControl:
             self.scanner_no_paper()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Starting up scanner")
     e = threading.Event()
     n = 0
     sc = ScannerControl()
-    
+
     def save(data: bytes):
         global n
-        with open(f"last_{n}.png", 'wb') as wf:
+        with open(f"last_{n}.png", "wb") as wf:
             wf.write(data)
         n += 1
         e.set()
-    
+
     sc.state_change = lambda state: print(f"State: {state}")
     sc.scanner_ready = lambda: e.set()
     sc.scanner_shutdown = lambda: e.set()

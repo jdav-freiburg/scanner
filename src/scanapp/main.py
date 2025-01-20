@@ -1,4 +1,5 @@
 import os
+
 # Set this before qt imports
 os.environ["QT_IM_MODULE"] = "qtvirtualkeyboard"
 
@@ -9,7 +10,6 @@ from PyQt5.QtCore import Qt, QObject
 from PyQt5.QtGui import QGuiApplication, QRegion
 
 from scanapp.widgets.main_window import MainWindow
-
 
 
 def handleVisibleChanged():
@@ -38,5 +38,5 @@ def main():
     sys.exit(app.exec_())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

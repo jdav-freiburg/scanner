@@ -1,6 +1,16 @@
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QPixmap, QGuiApplication
-from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QStackedLayout, QWidget, QDialogButtonBox, QProgressBar
+from PyQt5.QtWidgets import (
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QHBoxLayout,
+    QStackedLayout,
+    QWidget,
+    QDialogButtonBox,
+    QProgressBar,
+)
 
 from scanapp.widgets.sendapi import ApiSender
 import schwifty
@@ -14,9 +24,10 @@ from scanapp.widgets.sendmail import MailSender, Attachment
 from scanapp.env import DISABLE_IBAN_CHECK, SEND_TARGET
 
 
-
 class ScanWidget(QWidget):
-    INSTRUCTION_TEXT_BEGIN = "Bitte sicherstellen, dass Scanner leer ist, dann auf 'Ok' klicken."
+    INSTRUCTION_TEXT_BEGIN = (
+        "Bitte sicherstellen, dass Scanner leer ist, dann auf 'Ok' klicken."
+    )
     INSTRUCTION_TEXT_JAM = "Bitte sicherstellen, dass Scanner leer ist, dann auf 'Ok' klicken.\nBei langen Rechnungen, die Rechnung in mehreren Teilen scannen, maximal A4."
     INSTRUCTION_TEXT_EMPTY = "Rechnung einlegen, dann auf 'Ok' klicken."
     INSTRUCTION_BUTTON_TEXT_START = "Scanner startet. Nichts einlegen!"
@@ -27,7 +38,7 @@ class ScanWidget(QWidget):
     SCANNING_SCANNING = "Scannen..."
     SCANNING_RECEIVING = "Empfange Daten..."
     SENDING_MAIL_TEXT = "Sende Scan als Mail an Rechnungen..."
-    FORMRESET_TIMEOUT = 5*60
+    FORMRESET_TIMEOUT = 5 * 60
     PAGE_START = 0
     PAGE_SCAN = 1
     PAGE_INFO = 2
@@ -49,11 +60,19 @@ class ScanWidget(QWidget):
         self.scanner.scanner_ready.connect(self._scanner_ready)
         self.scanner.scanner_shutdown.connect(self._scanner_unready)
         self.scanner.scanner_success.connect(lambda data: self._scan_result_ready(data))
-        self.scanner.scanner_starting.connect(lambda: self._show_status(self.SCANNING_STARTING, self.SCAN_START_DURATION))
-        self.scanner.scanner_running.connect(lambda: self._show_status(self.SCANNING_SCANNING, self.SCANNING_DURATION))
-        self.scanner.scanner_receiving.connect(lambda: self._show_status(self.SCANNING_RECEIVING, self.RECEIVING_DURATION))
+        self.scanner.scanner_starting.connect(
+            lambda: self._show_status(self.SCANNING_STARTING, self.SCAN_START_DURATION)
+        )
+        self.scanner.scanner_running.connect(
+            lambda: self._show_status(self.SCANNING_SCANNING, self.SCANNING_DURATION)
+        )
+        self.scanner.scanner_receiving.connect(
+            lambda: self._show_status(self.SCANNING_RECEIVING, self.RECEIVING_DURATION)
+        )
         self.scanner.scanner_jam.connect(self._paper_jam)
-        self.scanner.scanner_no_paper.connect(lambda: self._retry_startup(is_empty=True))
+        self.scanner.scanner_no_paper.connect(
+            lambda: self._retry_startup(is_empty=True)
+        )
 
         # Create stacked layout and add layouts
         self.stacked_layout = QStackedLayout(self)
@@ -145,7 +164,13 @@ class ScanWidget(QWidget):
         else:
             title = "Hinweis"
             msg = self.INSTRUCTION_TEXT_BEGIN
-        dlg = MessageDialog(self, title, msg, QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Abort)
+        dlg = MessageDialog(
+            self,
+            title,
+            msg,
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Abort,
+        )
+
         def accept(*_):
             dlg.close()
             if is_empty:
@@ -155,10 +180,11 @@ class ScanWidget(QWidget):
                 self._show_scanner()
             else:
                 self._show_scanner()
+
         dlg.buttons.accepted.connect(accept)
         dlg.buttons.rejected.connect(lambda *_: dlg.close() and self.clear())
         dlg.exec()
-    
+
     @exc
     def _paper_jam(self):
         self._retry_startup(is_jam=True)
@@ -196,16 +222,23 @@ class ScanWidget(QWidget):
     @exc
     def _show_scanner(self, *_):
         self.stacked_layout.setCurrentIndex(self.PAGE_DONEMORE)
-        self.scan_collector = ScanCollector((self.scan_preview.width(), self.scan_preview.height()))
+        self.scan_collector = ScanCollector(
+            (self.scan_preview.width(), self.scan_preview.height())
+        )
         self.stacked_layout.setCurrentIndex(self.PAGE_SCAN)
         self.name_input.setFocus()
         QGuiApplication.inputMethod().show()
         self.scan_button.setEnabled(False)
         self._reset_reset_timer()
         self.scanner.startup()
-    
+
     def _input_failure(self, msg: str):
-        dlg = MessageDialog(self, "Falsche Eingabe", msg, QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Abort)
+        dlg = MessageDialog(
+            self,
+            "Falsche Eingabe",
+            msg,
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Abort,
+        )
         dlg.buttons.accepted.connect(lambda *_: dlg.close() and self._show_scanner())
         dlg.buttons.rejected.connect(lambda *_: dlg.close() and self.clear())
         dlg.exec()
@@ -247,9 +280,11 @@ class ScanWidget(QWidget):
         else:
             self.processing_progbar.setVisible(True)
             self.processing_progbar.setValue(0)
-            self.processing_progbar.setRange(0, int(duration/self.PROCBAR_UPDATE_INTERVAL))
+            self.processing_progbar.setRange(
+                0, int(duration / self.PROCBAR_UPDATE_INTERVAL)
+            )
             self.processing_procupdate.start()
-    
+
     @exc
     def _scan_result_ready(self, data: bytes):
         with open("last.png", "wb") as wf:
@@ -271,7 +306,9 @@ class ScanWidget(QWidget):
             purpose=self.purpose_input.text(),
             iban=self.iban_input.text(),
             attachments=[
-                Attachment(name=f"scan_{idx}.jpg", mime_main="image", mime_sub="jpeg", data=img)
+                Attachment(
+                    name=f"scan_{idx}.jpg", mime_main="image", mime_sub="jpeg", data=img
+                )
                 for idx, img in enumerate(images)
             ],
         )
@@ -281,7 +318,12 @@ class ScanWidget(QWidget):
 
     @exc
     def _mail_failure(self, msg: str, saved_path: str):
-        dlg = MessageDialog(self, "Mail Failure", f"Email konnte nicht versendet werden: {msg}\nBitte administrator kontaktieren.\nMail wurde lokal gespeichert unter:\n{saved_path}", QDialogButtonBox.StandardButton.Ok)
+        dlg = MessageDialog(
+            self,
+            "Mail Failure",
+            f"Email konnte nicht versendet werden: {msg}\nBitte administrator kontaktieren.\nMail wurde lokal gespeichert unter:\n{saved_path}",
+            QDialogButtonBox.StandardButton.Ok,
+        )
         dlg.buttons.accepted.connect(lambda *_: dlg.close() and self._show_scanner())
         dlg.exec()
 
