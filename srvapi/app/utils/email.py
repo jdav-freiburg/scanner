@@ -29,11 +29,11 @@ async def send_email(payload: BillPayload, attachments: list[Attachment]) -> boo
     # Create a text/plain message
     msg = EmailMessage()
     msg.set_content((
-        f"{payload.name} hat eine Rechnung einreicht:\n"
-        f"  Name: {payload.name}\n"
-        f"  Zweck: {payload.purpose}\n"
-        f"  IBAN: {payload.iban}\n"
-    ).encode(), maintype="text", subtype="text")
+        f"{payload.name} hat eine Rechnung einreicht:<br>\n"
+        f"  Name: {payload.name}<br>\n"
+        f"  Zweck: {payload.purpose}<br>\n"
+        f"  IBAN: {payload.iban}<br>\n"
+    ).encode(), maintype="text", subtype="html")
 
     # me == the sender's email address
     # you == the recipient's email address
