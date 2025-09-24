@@ -1,23 +1,32 @@
-# Use an official Python runtime as a base image
-FROM python:3.11-slim
+FROM python:3.12-slim-bookworm AS base
 
-# Install Poetry
-RUN pip install poetry
+# Builder stage - install dependencies with uv
+FROM base AS builder
 
-# Set the working directory in the container
+# Install uv (static binary)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+
 WORKDIR /app
 
-# Copy pyproject.toml and poetry.lock
-COPY pyproject.toml poetry.lock ./
+# Install only dependencies first to enable layer caching
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --frozen --no-install-project --no-dev
 
-# Install dependencies using Poetry
-RUN poetry install --no-root --only main
+# Copy app source code and install the project itself
+COPY src Readme.md /app/
+RUN uv sync --frozen --no-dev
 
-# Copy the application code
-COPY app ./app
+# Final runtime image
+FROM base
 
-# Expose the port that FastAPI will run on
+WORKDIR /app
+
+COPY --from=builder /app /app
+
+ENV PATH="/app/.venv/bin:$PATH"
+
 EXPOSE 80
 
-# Command to run the FastAPI application
-CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
