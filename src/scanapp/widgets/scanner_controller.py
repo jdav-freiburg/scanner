@@ -1,5 +1,7 @@
-from PyQt5.QtCore import pyqtSignal, QObject
-from scanapp.scanner_control import ScannerState, ScannerControl
+from PIL import Image
+from PyQt5.QtCore import QObject, pyqtSignal
+
+from scanapp.scanner_control import ScannerControl, ScannerState
 
 
 class ScannerController(QObject):
@@ -34,11 +36,11 @@ class ScannerController(QObject):
         self.ctrl.scanner_success = self._scanner_success
         self.ctrl.scanner_jam = self.scanner_jam.emit
         self.ctrl.scanner_no_paper = self.scanner_no_paper.emit
-    
+
     def _scanner_success(self, img: Image.Image):
         self._last_image = img
         self.scanner_success.emit()
-    
+
     def get_last_image(self) -> Image.Image | None:
         res = self._last_image
         self._last_image = None

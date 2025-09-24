@@ -132,7 +132,7 @@ class DSDriver:
         assert self.user_write_ep.bEndpointAddress == 0x04
         self.user_read_ep = self.user_interface[1]
         assert self.user_read_ep.bEndpointAddress == 0x83
-    
+
     def close(self):
         self.dev.finalize()
 
@@ -218,7 +218,7 @@ class DSDriver:
                 elif detail == 0x00:
                     # Empty Page
                     assert len(packet) == 2
-                    print(f"Empty page")
+                    print("Empty page")
                 elif detail == 0x11:
                     # Whatever case is this?
                     assert len(packet) == 0xC
@@ -233,7 +233,7 @@ class DSDriver:
                 elif detail == 0x41:
                     # Phew, what condition?
                     # internal: 0x4001
-                    print(f"Some info code?")
+                    print("Some info code?")
                 elif detail == 0x40:
                     # Probably aborted
                     # internal: 0x4002
@@ -243,7 +243,7 @@ class DSDriver:
                     return
                 elif detail == 0x51:
                     # error happen
-                    print(f"Some error")
+                    print("Some error")
                     assert False
                 else:
                     assert False, f"Unknown cmd: {packet}"
@@ -341,7 +341,7 @@ def dbg_outer_scan():
             t_barrier.wait()
             t_abort.wait(SCAN_MAX_DURATION_LONG)
             GPIO.output(PIN_PAPER, False)
-            print(f"Paper=False after {time.time()-start}sec")
+            print(f"Paper=False after {time.time() - start}sec")
             start = time.time()
 
         def start_motor():
@@ -349,7 +349,7 @@ def dbg_outer_scan():
             t_barrier.wait()
             t_abort.wait(MOTOR_WAKE_START_TIME)
             GPIO.output(PIN_MOTOR_SLEEP, True)
-            print(f"Motor=Wake after {time.time()-start}sec")
+            print(f"Motor=Wake after {time.time() - start}sec")
 
         t_paper_out = threading.Thread(target=end_paper)
         t_start_motor = threading.Thread(target=start_motor)

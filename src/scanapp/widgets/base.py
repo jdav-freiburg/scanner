@@ -1,10 +1,8 @@
 import functools
-import os
 import traceback
 
 
 def exc(fn):
-
     @functools.wraps(fn)
     def _fn(*args, **kwargs):
         try:

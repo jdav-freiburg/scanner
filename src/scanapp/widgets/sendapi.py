@@ -1,11 +1,12 @@
-import json
-from PyQt5.QtCore import pyqtSignal, QThread
-from scanapp.widgets.base import exc
-import os
 import datetime
-import requests
+import json
+import os
 
-from scanapp.env import API_TARGET, API_KEY
+import requests
+from PyQt5.QtCore import QThread, pyqtSignal
+
+from scanapp.env import API_KEY, API_TARGET
+from scanapp.widgets.base import exc
 from scanapp.widgets.sendmail import Attachment
 
 
@@ -13,9 +14,7 @@ class ApiSender(QThread):
     done = pyqtSignal()
     failure = pyqtSignal(str, str)
 
-    def __init__(
-        self, parent, name: str, purpose: str, iban: str, attachments: list[Attachment]
-    ):
+    def __init__(self, parent, name: str, purpose: str, iban: str, attachments: list[Attachment]):
         super().__init__(parent)
         self.json_data = {
             "name": name,
@@ -51,9 +50,7 @@ class ApiSender(QThread):
             r.raise_for_status()
         except Exception as e:
             os.makedirs("failed_data", exist_ok=True)
-            filename_base = (
-                f"failed_data/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-            )
+            filename_base = f"failed_data/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
             with open(f"{filename_base}.json", "w") as wf:
                 json.dump(self.json_data, wf, indent=2)
             for attachment in self.attachments:

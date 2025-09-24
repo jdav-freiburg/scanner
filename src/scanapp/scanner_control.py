@@ -270,11 +270,11 @@ class ScannerControl:
         self._sleep_timer.stop()
         self._waiter.stop()
         self._waiter2.stop()
-        
+
         if self.drv is not None:
             self.drv.close()
             self.drv = None
-        
+
         GPIO.output(PIN_MOTOR_AWAKE, False)
         GPIO.output(PIN_ONOFF, False)
         GPIO.output(PIN_BUTTON, False)
@@ -330,7 +330,7 @@ class ScannerControl:
             t_barrier.wait()
             t_abort.wait(duration)
             GPIO.output(PIN_PAPER, False)
-            print(f"Paper=False after {time.time()-start}sec")
+            print(f"Paper=False after {time.time() - start}sec")
             start = time.time()
 
             self._set_state(ScannerState.ScanReceiving)

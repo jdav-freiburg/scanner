@@ -2,12 +2,12 @@ try:
     from PyQt5.QtGui import QImage
 except ImportError:
     QImage = None
-from pathlib import Path
 import io
-from PIL import Image, ImageChops, ImageOps
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
+from PIL import Image, ImageChops, ImageOps
 
 
 @dataclass
@@ -29,9 +29,7 @@ class Cropbox:
     def height(self) -> int:
         return self.bottom - self.top
 
-    def extend_below(
-        self, other: "Cropbox"
-    ) -> tuple["Cropbox", tuple[int, int], tuple[int, int]]:
+    def extend_below(self, other: "Cropbox") -> tuple["Cropbox", tuple[int, int], tuple[int, int]]:
         return (
             Cropbox(
                 min(self.left, other.left),
@@ -274,9 +272,9 @@ class ScanCollector:
 def imshow(qimg):
     import sys
 
-    from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
     from PyQt5.QtCore import Qt
-    from PyQt5.QtGui import QGuiApplication, QPixmap
+    from PyQt5.QtGui import QPixmap
+    from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow
 
     # Create the application and show the pin input window
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableHighDpiScaling, True)

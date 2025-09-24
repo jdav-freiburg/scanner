@@ -12,7 +12,6 @@ MessageDialog.MAIN_STYLE = STYLESHEET
 
 
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
 

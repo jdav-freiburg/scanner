@@ -1,5 +1,6 @@
-import schwifty
 import sys
+
+import schwifty
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QGuiApplication, QPixmap
 from PyQt5.QtWidgets import (
@@ -25,9 +26,7 @@ from scanapp.widgets.sendmail import Attachment, MailSender
 
 
 class ScanWidget(QWidget):
-    INSTRUCTION_TEXT_BEGIN = (
-        "Bitte sicherstellen, dass Scanner leer ist, dann auf 'Ok' klicken."
-    )
+    INSTRUCTION_TEXT_BEGIN = "Bitte sicherstellen, dass Scanner leer ist, dann auf 'Ok' klicken."
     INSTRUCTION_TEXT_JAM = "Bitte sicherstellen, dass Scanner leer ist, dann auf 'Ok' klicken.\nBei langen Rechnungen, die Rechnung in mehreren Teilen scannen, maximal A4."
     INSTRUCTION_TEXT_EMPTY = "Rechnung einlegen, dann auf 'Ok' klicken."
     INSTRUCTION_BUTTON_TEXT_START = "Scanner startet. Nichts einlegen!"

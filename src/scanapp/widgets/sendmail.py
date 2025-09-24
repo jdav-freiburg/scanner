@@ -1,21 +1,22 @@
-from PyQt5.QtCore import pyqtSignal, QThread
-from scanapp.widgets.base import exc
-from dataclasses import dataclass
-import os
 import datetime
+import os
 import smtplib
-
+from dataclasses import dataclass
 from email.message import EmailMessage
+
+from PyQt5.QtCore import QThread, pyqtSignal
+
 from scanapp.env import (
     MAIL_FROM,
     MAIL_HOST,
     MAIL_PASSWORD,
     MAIL_PORT,
     MAIL_SSL,
-    MAIL_TO,
     MAIL_START_TLS,
+    MAIL_TO,
     MAIL_USER,
 )
+from scanapp.widgets.base import exc
 
 
 @dataclass
@@ -30,9 +31,7 @@ class MailSender(QThread):
     done = pyqtSignal()
     failure = pyqtSignal(str, str)
 
-    def __init__(
-        self, parent, name: str, purpose: str, iban: str, attachments: list[Attachment]
-    ):
+    def __init__(self, parent, name: str, purpose: str, iban: str, attachments: list[Attachment]):
         super().__init__(parent)
         self.subject = f"Neue Rechnung von {name}"
         self.text = (

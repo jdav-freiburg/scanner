@@ -1,7 +1,9 @@
-from email.message import EmailMessage
 import os
 from dataclasses import dataclass
+from email.message import EmailMessage
+
 from aiosmtplib import SMTP
+
 from app.models.bill import BillPayload
 
 MAIL_TO = os.environ.get("MAIL_TO", "postmaster@localhost")
@@ -28,18 +30,22 @@ async def send_email(payload: BillPayload, attachments: list[Attachment]) -> boo
     """
     # Create a text/plain message
     msg = EmailMessage()
-    msg.set_content((
-        f"{payload.name} hat eine Rechnung einreicht:<br>\n"
-        f"  Name: {payload.name}<br>\n"
-        f"  Zweck: {payload.purpose}<br>\n"
-        f"  IBAN: {payload.iban}<br>\n"
-    ).encode(), maintype="text", subtype="html")
+    msg.set_content(
+        (
+            f"{payload.name} hat eine Rechnung einreicht:<br>\n"
+            f"  Name: {payload.name}<br>\n"
+            f"  Zweck: {payload.purpose}<br>\n"
+            f"  IBAN: {payload.iban}<br>\n"
+        ).encode(),
+        maintype="text",
+        subtype="html",
+    )
 
     # me == the sender's email address
     # you == the recipient's email address
-    msg['Subject'] = f"Neue Rechnung von {payload.name}"
-    msg['From'] = MAIL_FROM
-    msg['To'] = MAIL_TO
+    msg["Subject"] = f"Neue Rechnung von {payload.name}"
+    msg["From"] = MAIL_FROM
+    msg["To"] = MAIL_TO
     for attachment in attachments:
         msg.add_attachment(
             attachment.data,
@@ -49,7 +55,12 @@ async def send_email(payload: BillPayload, attachments: list[Attachment]) -> boo
         )
 
     try:
-        smtp = SMTP(hostname=MAIL_HOST, port=MAIL_PORT, use_tls=MAIL_SSL, start_tls=MAIL_START_TLS)
+        smtp = SMTP(
+            hostname=MAIL_HOST,
+            port=MAIL_PORT,
+            use_tls=MAIL_SSL,
+            start_tls=MAIL_START_TLS,
+        )
         await smtp.connect()
         if MAIL_USER and MAIL_PASSWORD:
             await smtp.login(MAIL_USER, MAIL_PASSWORD)

@@ -1,6 +1,6 @@
 import os
-from fastapi import HTTPException, Header
 
+from fastapi import Header, HTTPException
 
 API_KEY = os.getenv("API_KEY", "123456")
 
