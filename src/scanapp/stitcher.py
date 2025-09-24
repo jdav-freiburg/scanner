@@ -51,14 +51,12 @@ class Cropbox:
 
 
 class ScanCollector:
-    MAX_HEIGHT = 4000
+    MAX_HEIGHT = 8000
     PREVIEW_MARGIN = 3
 
-    # CALIBRATION = np.asarray(Image.open(Path(__file__).parent / 'calibration100.png'))
-    # CALIBRATION = Image.open(Path(__file__).parent / 'calibration100.png')
-    CALIBRATION_BG = Image.open(Path(__file__).parent / "calibration100_bg.png")
-    CALIBRATION_WHITE = Image.open(Path(__file__).parent / "calibration100_white.png")
-    CALIBRATION_GRAY = Image.open(Path(__file__).parent / "calibration100_gray.png")
+    CALIBRATION_BG = Image.open(Path(__file__).parent / "calibration150_bg.png")
+    CALIBRATION_WHITE = Image.open(Path(__file__).parent / "calibration150_white.png")
+    CALIBRATION_GRAY = Image.open(Path(__file__).parent / "calibration150_gray.png")
 
     cur_img: Image.Image | None
     cur_cropbox: Cropbox
@@ -80,6 +78,8 @@ class ScanCollector:
         return self.cur_img is not None
 
     def begin_next(self):
+        if self.cur_img is not None:
+            self._finalize_current()
         self.cur_img = None
 
     def get_all(self) -> list[bytes]:
@@ -87,14 +87,17 @@ class ScanCollector:
             self._finalize_current()
         return self.imgs
 
-    def _cropbox(self, img: Image.Image) -> Cropbox:
-        calib = self.CALIBRATION_BG.resize(img.size)
+    def _cropbox(self, img: Image.Image) -> Cropbox | None:
+        calib = self.CALIBRATION_BG.resize(img.size, resample=Image.Resampling.NEAREST)
         print(calib, img)
         diff = ImageChops.difference(img, calib)
         del calib
         diff = ImageOps.grayscale(diff)
-        diff = Image.eval(diff, lambda c: 0 if c < 24 else 255)
-        return Cropbox(*diff.getbbox())
+        diff = Image.eval(diff, lambda c: 0 if c < 28 else 255)
+        diffbox = diff.getbbox()
+        if not diffbox:
+            return None
+        return Cropbox(*diffbox)
 
     # def _cropbox(self, img: Image.Image) -> Cropbox:
     #     # Compute the diff mask
@@ -114,12 +117,8 @@ class ScanCollector:
 
     def apply_calibration(self, img: Image.Image, crop: tuple[int, int]) -> Image.Image:
         img = np.asarray(img, dtype=np.float16)
-        white = np.asarray(
-            self.CALIBRATION_WHITE.crop((crop[0], 0, crop[1], 1)), dtype=np.float16
-        )
-        gray = np.asarray(
-            self.CALIBRATION_GRAY.crop((crop[0], 0, crop[1], 1)), dtype=np.float16
-        )
+        white = np.asarray(self.CALIBRATION_WHITE.crop((crop[0], 0, crop[1], 1)), dtype=np.float16)
+        gray = np.asarray(self.CALIBRATION_GRAY.crop((crop[0], 0, crop[1], 1)), dtype=np.float16)
         black = white - (white - gray) * 1.5
         res = (img - black) / ((white - black) / 255)
         # white = self.CALIBRATION_WHITE.crop((crop[0], 0, crop[2], 1))
@@ -131,15 +130,17 @@ class ScanCollector:
         # (MAX - (white - img)) * ((MAX - (white - gray)) / MAX / 0.8)
         return Image.fromarray(res.clip(0, 255).astype(np.uint8), mode="RGB")
 
-    def append(self, img_data: bytes):
-        img = Image.open(io.BytesIO(img_data))
+    def append(self, img_data: bytes | Image.Image):
+        if isinstance(img_data, bytes):
+            img = Image.open(io.BytesIO(img_data))
+        else:
+            assert isinstance(img_data, Image.Image)
+            img = img_data
         cropbox = self._cropbox(img)
-        if cropbox.empty:
+        if cropbox is None or cropbox.empty:
             print("Empty scan")
             return
-        assert (
-            img.width == self.CALIBRATION_BG.width
-        ), "Calibration does not match the scanned size"
+        assert img.width == self.CALIBRATION_BG.width, "Calibration does not match the scanned size"
         img = img.crop((cropbox.left, cropbox.top, cropbox.right, cropbox.bottom))
         img = self.apply_calibration(img, (cropbox.left, cropbox.right))
         if self.cur_img is None:
@@ -160,9 +161,7 @@ class ScanCollector:
             self.cur_thumbnail_x += self.cur_thumbnail_width
             self.cur_thumbnail_width = 0
         else:
-            print(
-                f"Extend last scan from cur_cropbox={self.cur_cropbox}, cropbox={cropbox}"
-            )
+            print(f"Extend last scan from cur_cropbox={self.cur_cropbox}, cropbox={cropbox}")
             # Extend current image
             new_cropbox, cur_offset, offset = self.cur_cropbox.extend_below(cropbox)
             print(
@@ -298,7 +297,7 @@ if __name__ == "__main__":
 
     sc = ScanCollector((SCREEN_RESOLUTION_WIDTH, SCREEN_RESOLUTION_HEIGHT))
 
-    with open("last_fix1.png", "rb") as rf:
+    with open("last.jpg", "rb") as rf:
         sc.append(rf.read())
 
     # with open("last_0.png", "rb") as rf:

@@ -1,5 +1,5 @@
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QLabel, QVBoxLayout, QDialog, QDialogButtonBox, QSizePolicy
+from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QLabel, QSizePolicy, QVBoxLayout
 
 from scanapp.env import SCREEN_RESOLUTION_HEIGHT, SCREEN_RESOLUTION_WIDTH
 
@@ -23,9 +23,7 @@ class MessageDialog(QDialog):
         if buttons != 0:
             self.buttons = QDialogButtonBox(buttons, Qt.Orientation.Horizontal, self)
 
-            self.buttons.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-            )
+            self.buttons.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         vbox = QVBoxLayout(self)
         vbox.addWidget(

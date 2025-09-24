@@ -5,9 +5,9 @@ os.environ["QT_IM_MODULE"] = "qtvirtualkeyboard"
 
 import sys
 
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt, QObject
+from PyQt5.QtCore import QObject, Qt
 from PyQt5.QtGui import QGuiApplication, QRegion
+from PyQt5.QtWidgets import QApplication
 
 from scanapp.widgets.main_window import MainWindow
 

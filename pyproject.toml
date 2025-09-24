@@ -1,24 +1,49 @@
-[tool.poetry]
+[project]
 name = "scanapp"
 version = "1.0.0"
-description = ""
-authors = ["Lukas Voegtle"]
-license = "BSD-3-clause"
+description = "ScanApp"
 readme = "Readme.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Lukas Voegtle", email = "5764745+voegtlel@users.noreply.github.com"},
+    
+]
+license = "BSD-3-clause"
 
-[tool.poetry.dependencies]
-python = "^3.10"
-rpi-lgpio = "^0.6"
-pyqt5 = "^5.15.9"
-schwifty = ">=2024.11.0"
-pillow = ">=11"
-requests = ">=2.32"
-numpy = ">=1.24.4"
-opencv-python-headless = ">=4.10"
+dependencies = [
+    #"rpi-lgpio>=0.6",
+    #"pyqt5>=5.15.9",
+    "schwifty>=2024.11.0",
+    "pillow>=11.1",
+    "requests>=2.32",
+    "numpy>=1.24",
+    "opencv-python-headless>=4.10",
+    "pyusb>=1.3",
+    "adafruit-circuitpython-pn532>=2.4",
+    "Adafruit-Blinka>=8.53",
+    "smbus2>=0.4.2",
+]
 
-[tool.poetry.scripts]
+[dependency-groups]
+dev = [
+    "Mock.GPIO>=0.1",
+    "pyqt5>=5.15",
+    "black",
+    "isort",
+]
+
+[project.scripts]
 scanapp = "scanapp.main:main"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+include = '\.pyi?$'

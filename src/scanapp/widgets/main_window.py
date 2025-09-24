@@ -1,15 +1,11 @@
 from pathlib import Path
 
-from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMainWindow, QStackedLayout
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QMainWindow
 
 from scanapp.env import SCREEN_RESOLUTION_HEIGHT, SCREEN_RESOLUTION_WIDTH
-from scanapp.widgets.base import exc
 from scanapp.widgets.message_dialog import MessageDialog
 from scanapp.widgets.scan import ScanWidget
-
 
 STYLESHEET = (Path(__file__).parent / "style.qss").read_text()
 MessageDialog.MAIN_STYLE = STYLESHEET

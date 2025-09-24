@@ -1,27 +1,27 @@
+import schwifty
+import sys
 from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QPixmap, QGuiApplication
+from PyQt5.QtGui import QGuiApplication, QPixmap
 from PyQt5.QtWidgets import (
+    QDialogButtonBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPushButton,
-    QVBoxLayout,
-    QHBoxLayout,
-    QStackedLayout,
-    QWidget,
-    QDialogButtonBox,
     QProgressBar,
+    QPushButton,
+    QStackedLayout,
+    QVBoxLayout,
+    QWidget,
 )
 
-from scanapp.widgets.sendapi import ApiSender
-import schwifty
-
+from scanapp.env import DISABLE_IBAN_CHECK, SEND_TARGET
+from scanapp.scanner_control import ScannerState
+from scanapp.stitcher import ScanCollector
 from scanapp.widgets.base import exc
 from scanapp.widgets.message_dialog import MessageDialog
 from scanapp.widgets.scanner_controller import ScannerController
-from scanapp.scanner_control import ScannerState
-from scanapp.stitcher import ScanCollector
-from scanapp.widgets.sendmail import MailSender, Attachment
-from scanapp.env import DISABLE_IBAN_CHECK, SEND_TARGET
+from scanapp.widgets.sendapi import ApiSender
+from scanapp.widgets.sendmail import Attachment, MailSender
 
 
 class ScanWidget(QWidget):
@@ -31,24 +31,24 @@ class ScanWidget(QWidget):
     INSTRUCTION_TEXT_JAM = "Bitte sicherstellen, dass Scanner leer ist, dann auf 'Ok' klicken.\nBei langen Rechnungen, die Rechnung in mehreren Teilen scannen, maximal A4."
     INSTRUCTION_TEXT_EMPTY = "Rechnung einlegen, dann auf 'Ok' klicken."
     INSTRUCTION_BUTTON_TEXT_START = "Scanner startet. Nichts einlegen!"
-    INSTRUCTION_BUTTON_TEXT_INSERT = "Rechnung einlegen, dann klicken."
+    INSTRUCTION_BUTTON_TEXT_INSERT = "Weiter zum Scannen"
     INSTRUCTION_BUTTON_TEXT_SCANNING = "Scannen..."
     INSTRUCTION_BUTTON_TEXT_SENDING = "Sende E-Mail..."
     SCANNING_STARTING = "Scanner startet..."
     SCANNING_SCANNING = "Scannen..."
     SCANNING_RECEIVING = "Empfange Daten..."
     SENDING_MAIL_TEXT = "Sende Scan als Mail an Rechnungen..."
-    FORMRESET_TIMEOUT = 5 * 60
+    FORMRESET_TIMEOUT = 10 * 60
     PAGE_START = 0
     PAGE_SCAN = 1
     PAGE_INFO = 2
     PAGE_DONEMORE = 3
+    PAGE_SCAN_LENGTH = 4
 
     PROCBAR_UPDATE_INTERVAL = 0.2
 
     SCAN_START_DURATION = 5
-    SCANNING_DURATION = 12
-    RECEIVING_DURATION = 10
+    RECEIVING_DURATION = 1
 
     scan_collector: ScanCollector | None = None
 
@@ -59,20 +59,18 @@ class ScanWidget(QWidget):
         self.scanner.state_change.connect(self._dbg_state_update)
         self.scanner.scanner_ready.connect(self._scanner_ready)
         self.scanner.scanner_shutdown.connect(self._scanner_unready)
-        self.scanner.scanner_success.connect(lambda data: self._scan_result_ready(data))
+        self.scanner.scanner_success.connect(self._scan_result_ready)
         self.scanner.scanner_starting.connect(
             lambda: self._show_status(self.SCANNING_STARTING, self.SCAN_START_DURATION)
         )
         self.scanner.scanner_running.connect(
-            lambda: self._show_status(self.SCANNING_SCANNING, self.SCANNING_DURATION)
+            lambda duration: self._show_status(self.SCANNING_SCANNING, duration, can_abort=True)
         )
         self.scanner.scanner_receiving.connect(
             lambda: self._show_status(self.SCANNING_RECEIVING, self.RECEIVING_DURATION)
         )
         self.scanner.scanner_jam.connect(self._paper_jam)
-        self.scanner.scanner_no_paper.connect(
-            lambda: self._retry_startup(is_empty=True)
-        )
+        self.scanner.scanner_no_paper.connect(lambda: self._retry_startup(is_empty=True))
 
         # Create stacked layout and add layouts
         self.stacked_layout = QStackedLayout(self)
@@ -118,6 +116,9 @@ class ScanWidget(QWidget):
         progress_layout.addWidget(self.processing_label)
         self.processing_progbar = QProgressBar(self)
         progress_layout.addWidget(self.processing_progbar)
+        self.processing_stop = QPushButton("Scan Fertig", self)
+        self.processing_stop.clicked.connect(self._stop_scan)
+        progress_layout.addWidget(self.processing_stop)
         progress_layout.addStretch()
         self.processing_procupdate = QTimer(self)
         self.processing_procupdate.setSingleShot(False)
@@ -142,6 +143,20 @@ class ScanWidget(QWidget):
         done_more_layout.addWidget(done_button)
         done_more.setLayout(done_more_layout)
         self.stacked_layout.addWidget(done_more)
+
+        scan_length = QWidget(self)
+        scan_length_layout = QVBoxLayout()
+        scan_normal_length = QPushButton("Bis zu A4 scannen")
+        scan_normal_length.clicked.connect(self._scan_normal_length)
+        scan_length_layout.addWidget(scan_normal_length)
+        scan_extra_long = QPushButton("Bis zu 3x A4 scannen")
+        scan_extra_long.clicked.connect(self._scan_extra_long)
+        scan_length_layout.addWidget(scan_extra_long)
+        scan_back = QPushButton("Zurück")
+        scan_back.clicked.connect(self._show_scanner)
+        scan_length_layout.addWidget(scan_back)
+        scan_length.setLayout(scan_length_layout)
+        self.stacked_layout.addWidget(scan_length)
 
         # Set up timer for auto reset
         self.reset_timer = QTimer(self)
@@ -222,9 +237,7 @@ class ScanWidget(QWidget):
     @exc
     def _show_scanner(self, *_):
         self.stacked_layout.setCurrentIndex(self.PAGE_DONEMORE)
-        self.scan_collector = ScanCollector(
-            (self.scan_preview.width(), self.scan_preview.height())
-        )
+        self.scan_collector = ScanCollector((self.scan_preview.width(), self.scan_preview.height()))
         self.stacked_layout.setCurrentIndex(self.PAGE_SCAN)
         self.name_input.setFocus()
         QGuiApplication.inputMethod().show()
@@ -261,8 +274,25 @@ class ScanWidget(QWidget):
             self._retry_startup()
         else:
             self.scan_button.setEnabled(False)
-            self._show_status(self.SCANNING_STARTING, self.SCAN_START_DURATION)
-            self.scanner.scan()
+            self._show_scan_length()
+
+    @exc
+    def _show_scan_length(self, *_):
+        self.stacked_layout.setCurrentIndex(self.PAGE_SCAN_LENGTH)
+
+    @exc
+    def _scan_normal_length(self, *_):
+        self._show_status(self.SCANNING_STARTING, self.SCAN_START_DURATION)
+        self.scanner.scan(long=False)
+
+    @exc
+    def _scan_extra_long(self, *_):
+        self._show_status(self.SCANNING_STARTING, self.SCAN_START_DURATION)
+        self.scanner.scan(long=True)
+
+    @exc
+    def _stop_scan(self, *_):
+        self.scanner.stop()
 
     @exc
     def _update_procbar(self, *_):
@@ -271,44 +301,47 @@ class ScanWidget(QWidget):
             self.processing_procupdate.stop()
 
     @exc
-    def _show_status(self, status_message: str, duration: float | None):
+    def _show_status(self, status_message: str, duration: float | None, can_abort: bool = False):
         self.processing_label.setText(status_message)
         self.stacked_layout.setCurrentIndex(self.PAGE_INFO)
+        self.processing_stop.setVisible(can_abort)
         if duration is None:
             self.processing_procupdate.stop()
             self.processing_progbar.setVisible(False)
         else:
             self.processing_progbar.setVisible(True)
             self.processing_progbar.setValue(0)
-            self.processing_progbar.setRange(
-                0, int(duration / self.PROCBAR_UPDATE_INTERVAL)
-            )
+            self.processing_progbar.setRange(0, int(duration / self.PROCBAR_UPDATE_INTERVAL))
             self.processing_procupdate.start()
 
     @exc
-    def _scan_result_ready(self, data: bytes):
-        with open("last.png", "wb") as wf:
-            wf.write(data)
-        self.scan_collector.append(data)
-        self._show_donemore()
+    def _scan_result_ready(self):
+        assert self.scan_collector is not None
+        img = self.scanner.get_last_image()
+        if img is not None:
+            img.save("last.jpg", quality=90)
+            self.scan_collector.append(img)
+            self._show_donemore()
 
     @exc
     def _send_mail(self, *_):
+        assert self.scan_collector is not None
         images = self.scan_collector.get_all()
         self._show_status(self.SENDING_MAIL_TEXT, None)
         if SEND_TARGET == "mail":
             sender_cls = MailSender
         elif SEND_TARGET == "api":
             sender_cls = ApiSender
+        else:
+            assert False, f"Invalid SEND_TARGET={SEND_TARGET}"
+        print(f"Sending {len(images)} images", file=sys.stderr)
         sender = sender_cls(
             self,
             name=self.name_input.text(),
             purpose=self.purpose_input.text(),
-            iban=self.iban_input.text().upper(),
+            iban=self.iban_input.text().replace(" ", "").upper(),
             attachments=[
-                Attachment(
-                    name=f"scan_{idx}.jpg", mime_main="image", mime_sub="jpeg", data=img
-                )
+                Attachment(name=f"scan_{idx}.jpg", mime_main="image", mime_sub="jpeg", data=img)
                 for idx, img in enumerate(images)
             ],
         )
@@ -335,11 +368,13 @@ class ScanWidget(QWidget):
     @exc
     def _scan_next(self, *_):
         # Bake the last image
+        assert self.scan_collector is not None
         self.scan_collector.begin_next()
         self._initiate_scan()
 
     @exc
     def _show_donemore(self):
+        assert self.scan_collector is not None
         self.scan_more_button.setEnabled(self.scan_collector.can_continue())
         self.stacked_layout.setCurrentIndex(self.PAGE_DONEMORE)
         self.scan_preview.setPixmap(QPixmap.fromImage(self.scan_collector.qthumbnail()))

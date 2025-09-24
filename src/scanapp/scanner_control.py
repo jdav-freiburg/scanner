@@ -1,11 +1,13 @@
-from RPi import GPIO
-from typing import Callable, Generator
-import subprocess
-import time
-import threading
 import os
+import threading
+import time
 from enum import Enum
+from typing import Callable, Generator
 
+from PIL import Image
+from RPi import GPIO
+
+from scanapp.ds_driver import DSDriver, SSPRequest, XSCRequest
 
 PIN_ONOFF = 26
 PIN_BUTTON = 16
@@ -20,7 +22,9 @@ STARTUP_DURATION = 7
 # Delay until starting the scanner again
 RESTART_DELAY = 1
 # Maximum duration for a scan, before the scanner needs an "end_paper of paper"
-SCAN_MAX_DURATION = 10.5
+SCAN_MAX_DURATION = 10
+# Maximum duration for a long scan, before the scanner needs an "end_paper of paper"
+SCAN_MAX_DURATION_LONG = 30
 # Time after starting the scan, when to enable the motor
 MOTOR_WAKE_START_TIME = 1.4
 # Time after starting the scan, when to disable the motor
@@ -168,12 +172,12 @@ class ScannerControl:
     # Scanner is starting to scan
     scanner_starting: Callable[[], None]
     # Scanner is pulling through data and scanning
-    scanner_running: Callable[[], None]
+    scanner_running: Callable[[float], None]
     # Scanner is currently receiving the data
     scanner_receiving: Callable[[], None]
     # One of the following three will end the scan:
-    # Result is the bytes
-    scanner_success: Callable[[bytes], None]
+    # Result is the Image
+    scanner_success: Callable[[Image.Image], None]
     # Scanner has jammed :(
     scanner_jam: Callable[[], None]
     # Scanner has no paper (internal error!)
@@ -249,6 +253,9 @@ class ScannerControl:
         self._set_state(ScannerState.Ready)
         self.scanner_ready()
 
+        print("Initializing USB driver")
+        self.drv = DSDriver()
+
     def _power_on(self):
         print("._power_on()")
         self._sleep_timer.stop()
@@ -263,6 +270,11 @@ class ScannerControl:
         self._sleep_timer.stop()
         self._waiter.stop()
         self._waiter2.stop()
+        
+        if self.drv is not None:
+            self.drv.close()
+            self.drv = None
+        
         GPIO.output(PIN_MOTOR_AWAKE, False)
         GPIO.output(PIN_ONOFF, False)
         GPIO.output(PIN_BUTTON, False)
@@ -284,35 +296,39 @@ class ScannerControl:
         self._push_button()
         self._waiter.delay(STARTUP_RESUME_DURATION, self._on_powered_on)
 
-    def scan(self):
+    def scan(self, long: bool):
         """Starts scanning"""
         print(".scan()")
         assert self.can_scan()
         self._set_state(ScannerState.ScanStarting)
-        t = threading.Thread(target=self._scan)
+        t = threading.Thread(
+            target=self._scan,
+            args=(SCAN_MAX_DURATION_LONG if long else SCAN_MAX_DURATION,),
+        )
         t.start()
 
-    def _scan(self):
-        print("._scan()")
-        self.scanner_starting()
-        jam = False
-        no_paper = False
-        res_data = b""
-        start = time.time()
-        GPIO.output(PIN_MOTOR_AWAKE, False)
+    def scan_stop(self):
+        """Stop scanning"""
+        print(".scan_stop()")
+        GPIO.output(PIN_PAPER, False)
 
-        t_barrier = threading.Barrier(6)
-        t_process_signal = threading.Event()
-        t_scanning_signal = threading.Event()
+    drv: DSDriver | None = None
+
+    def _scan(self, duration: float = SCAN_MAX_DURATION):
+        print("._scan()")
+        assert self.drv is not None, "Driver not initialized"
+        self.scanner_starting()
+        start = time.time()
+        # GPIO.output(PIN_MOTOR_AWAKE, False)
+
+        t_barrier = threading.Barrier(2)
         t_abort = threading.Event()
 
         def end_paper():
             nonlocal start
             # Synchronize the start
             t_barrier.wait()
-            # It's now ready to start the sleep most "precisely"
-            t_scanning_signal.wait()
-            t_abort.wait(SCAN_MAX_DURATION)
+            t_abort.wait(duration)
             GPIO.output(PIN_PAPER, False)
             print(f"Paper=False after {time.time()-start}sec")
             start = time.time()
@@ -320,64 +336,9 @@ class ScannerControl:
             self._set_state(ScannerState.ScanReceiving)
             self.scanner_receiving()
 
-        def start_motor():
-            # Synchronize the start
-            t_barrier.wait()
-            # It's now ready to start the sleep most "precisely"
-            t_scanning_signal.wait()
-            t_abort.wait(MOTOR_WAKE_START_TIME)
-            GPIO.output(PIN_MOTOR_AWAKE, True)
-            print(f"Motor=Awake after {time.time()-start}sec")
-            self._set_state(ScannerState.ScanRunning)
-            self.scanner_running()
+        t_end_paper = threading.Thread(target=end_paper)
 
-        def stop_motor():
-            # Synchronize the start
-            t_barrier.wait()
-            # It's now ready to start the sleep most "precisely"
-            t_scanning_signal.wait()
-            t_abort.wait(MOTOR_SLEEP_START_TIME)
-            GPIO.output(PIN_MOTOR_AWAKE, False)
-            print(f"Motor=Sleep after {time.time()-start}sec")
-
-        def read_data_fn():
-            nonlocal res_data
-            # Synchronize the start
-            t_barrier.wait()
-            t_process_signal.wait()
-            res_data = read_file_raw(read_data)
-
-        def read_info_fn():
-            nonlocal no_paper, jam, start
-            # Synchronize the start
-            t_barrier.wait()
-            t_process_signal.wait()
-            for line in read_file_by_lines(read_info):
-                if b"sane_start(" in line:
-                    # Scanner is now starting, notify the thread
-                    start = time.time()
-                    t_scanning_signal.set()
-                    print("Scanner Start, start paper timeout")
-                elif b"sane_close(" in line:
-                    # Scanner has finished
-                    print("Scanner Close")
-                elif b"Document feeder out of documents" in line:
-                    no_paper = True
-                elif b"Document feeder jammed" in line:
-                    jam = True
-
-        t_timeout = threading.Thread(target=end_paper)
-        t_read_data = threading.Thread(target=read_data_fn)
-        t_read_info = threading.Thread(target=read_info_fn)
-        t_start_motor = threading.Thread(target=start_motor)
-        t_stop_motor = threading.Thread(target=stop_motor)
-
-        t_timeout.start()
-        t_read_data.start()
-        t_read_info.start()
-        t_start_motor.start()
-        t_stop_motor.start()
-
+        t_end_paper.start()
         print("Threads started")
 
         print("Setting paper=True")
@@ -389,52 +350,32 @@ class ScannerControl:
         t_barrier.wait()
 
         try:
-            read_data, write_data = os.pipe()
-            read_info, write_info = os.pipe()
-            # Scan
-            with subprocess.Popen(
-                [
-                    "sudo",
-                    "chroot",
-                    "/opt/scanberryd-amd64/",
-                    "bash",
-                    "-c",
-                    f"SANE_DEBUG_DLL=255 scanimage --format=png --resolution={DPI}",
-                ],
-                stdout=write_data,
-                stderr=write_info,
-                close_fds=True,
-            ) as proc:
-                # Activate the readers
-                t_process_signal.set()
-                # This will wait until the process has finished
+            if duration > SCAN_MAX_DURATION:
+                long = "ON"
+            else:
+                long = "OFF"
+            self.drv.set_parameters(SSPRequest(RESO=(150, 150), LONG=long, AREA="OVER"))
+            self.scanner_running(duration)
+            page = None
+            for page in self.drv.scan(
+                XSCRequest(
+                    RESO=(150, 150),
+                    AREA=(0, 0, 1294, 1650),
+                )
+            ):
+                pass
             print(f"Done after {time.time() - start}s")
         finally:
             # Finish everything
-            os.close(write_data)
-            os.close(write_info)
-            t_process_signal.set()
-            t_scanning_signal.set()
             t_abort.set()
-            t_timeout.join()
-            t_read_data.join()
-            t_read_info.join()
-            t_stop_motor.join()
+            t_end_paper.join()
+            GPIO.output(PIN_PAPER, False)
 
         print(f"Duration: {time.time() - start}sec")
-        if not jam and not no_paper:
-            # Did it work? :)
-            # Contains the png file
-            assert len(res_data) > 0, proc.stderr.decode()
-            assert res_data[:4] == b"\x89PNG"
-            print(f"Received data: {len(res_data)}b")
-            self._set_state(ScannerState.Ready)
-            self.scanner_success(res_data)
-        elif jam:
-            self._set_state(ScannerState.Paperjam)
-            self.scanner_jam()
-        elif no_paper:
-            self._set_state(ScannerState.Ready)
+        self._set_state(ScannerState.Ready)
+        if page is not None:
+            self.scanner_success(page)
+        else:
             self.scanner_no_paper()
 
 
@@ -444,10 +385,9 @@ if __name__ == "__main__":
     n = 0
     sc = ScannerControl()
 
-    def save(data: bytes):
+    def save(img: Image.Image):
         global n
-        with open(f"last_{n}.png", "wb") as wf:
-            wf.write(data)
+        img.save(f"last_{n}.jpg", quality=90)
         n += 1
         e.set()
 
@@ -455,7 +395,7 @@ if __name__ == "__main__":
     sc.scanner_ready = lambda: e.set()
     sc.scanner_shutdown = lambda: e.set()
     sc.scanner_starting = lambda: None
-    sc.scanner_running = lambda: None
+    sc.scanner_running = lambda t: None
     sc.scanner_receiving = lambda: None
     sc.scanner_success = save
     sc.scanner_jam = lambda: e.set()
@@ -463,10 +403,10 @@ if __name__ == "__main__":
     sc.startup()
     e.wait()
     e.clear()
-    sc.scan()
+    sc.scan(False)
     e.wait()
     e.clear()
-    sc.scan()
+    sc.scan(False)
     e.wait()
     e.clear()
     sc.shutdown()
