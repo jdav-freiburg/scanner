@@ -45,6 +45,7 @@ class ScanWidget(QWidget):
     PAGE_INFO = 2
     PAGE_DONEMORE = 3
     PAGE_SCAN_NOW = 4
+    PAGE_SUCCESS = 5
 
     PROCBAR_UPDATE_INTERVAL = 0.2
 
@@ -154,6 +155,12 @@ class ScanWidget(QWidget):
         scan_now.clicked.connect(self._scan_now)
         self.stacked_layout.addWidget(scan_now)
 
+        success_button = QPushButton(
+            "Senden erfolgreich!\nKlicken um zurückzukehren."
+        )
+        success_button.clicked.connect(self._show_scanner)
+        self.stacked_layout.addWidget(success_button)
+
         # Set up timer for auto reset
         self.reset_timer = QTimer(self)
         self.reset_timer.setSingleShot(True)
@@ -249,6 +256,10 @@ class ScanWidget(QWidget):
         self.scan_button.setEnabled(False)
         self._reset_reset_timer()
         self.scanner.startup()
+    
+    @exc
+    def _show_success(self, *_):
+        self.stacked_layout.setCurrentIndex(self.PAGE_SUCCESS)
 
     def _input_failure(self, msg: str):
         dlg = MessageDialog(
@@ -345,7 +356,7 @@ class ScanWidget(QWidget):
                 for idx, img in enumerate(images)
             ],
         )
-        sender.done.connect(self._show_scanner)
+        sender.done.connect(self._show_success)
         sender.failure.connect(self._mail_failure)
         sender.start()
 
@@ -354,7 +365,7 @@ class ScanWidget(QWidget):
         dlg = MessageDialog(
             self,
             "Mail Failure",
-            f"Email konnte nicht versendet werden: {msg}\nBitte administrator kontaktieren.\nMail wurde lokal gespeichert unter:\n{saved_path}",
+            f"Email konnte nicht versendet werden: {msg}\nBitte Administrator kontaktieren.\nMail wurde lokal gespeichert unter:\n{saved_path}",
             QDialogButtonBox.StandardButton.Ok,
         )
         dlg.buttons.accepted.connect(lambda *_: dlg.close() and self._show_scanner())
