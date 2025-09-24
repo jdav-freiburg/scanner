@@ -37,6 +37,8 @@ class ScanWidget(QWidget):
     SCANNING_SCANNING = "Scannen..."
     SCANNING_RECEIVING = "Empfange Daten..."
     SENDING_MAIL_TEXT = "Sende Scan als Mail an Rechnungen..."
+    IBAN_WRONG_INFO = '<font color="red">✕</font>'
+    IBAN_CORRECT_INFO = '<font color="green">✓</font>'
     FORMRESET_TIMEOUT = 10 * 60
     PAGE_START = 0
     PAGE_SCAN = 1
@@ -91,8 +93,11 @@ class ScanWidget(QWidget):
         purpose_box.addWidget(self.purpose_input, stretch=1)
         iban_box = QHBoxLayout()
         self.iban_input = QLineEdit(self)
+        self.iban_input.textChanged.connect(self._update_iban_correct)
         iban_box.addWidget(QLabel("IBAN:"), stretch=0)
         iban_box.addWidget(self.iban_input, stretch=1)
+        self.iban_correct_label = QLabel(self.IBAN_WRONG_INFO)
+        iban_box.addWidget(self.iban_correct_label, stretch=0)
         self.scan_button = QPushButton(self.INSTRUCTION_BUTTON_TEXT_START)
         self.scan_button.clicked.connect(self._initiate_scan)
         close_button = QPushButton("Schließen")
@@ -163,6 +168,15 @@ class ScanWidget(QWidget):
         self.reset_timer.timeout.connect(self.clear)
 
         self.stacked_layout.setCurrentIndex(self.PAGE_START)
+
+    @exc
+    def _update_iban_correct(self, *_):
+        try:
+            schwifty.IBAN(self.iban_input.text())
+        except schwifty.exceptions.SchwiftyException as e:
+            self.iban_correct_label.setText(self.IBAN_WRONG_INFO)
+        else:
+            self.iban_correct_label.setText(self.IBAN_CORRECT_INFO)
 
     @exc
     def _retry_startup(self, is_jam: bool = False, is_empty: bool = False):
