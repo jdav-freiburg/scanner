@@ -44,7 +44,7 @@ class ScanWidget(QWidget):
     PAGE_SCAN = 1
     PAGE_INFO = 2
     PAGE_DONEMORE = 3
-    PAGE_SCAN_LENGTH = 4
+    PAGE_SCAN_NOW = 4
 
     PROCBAR_UPDATE_INTERVAL = 0.2
 
@@ -136,7 +136,7 @@ class ScanWidget(QWidget):
         done_more_layout.addStretch()
         self.scan_preview = QLabel()
         done_more_layout.addWidget(self.scan_preview, stretch=1)
-        self.scan_more_button = QPushButton("Weiter Scannen")
+        self.scan_more_button = QPushButton("Weiter Scannen (wenn nicht zu Ende)")
         self.scan_more_button.clicked.connect(self._scan_more)
         done_more_layout.addWidget(self.scan_more_button)
         add_button = QPushButton("Weitere Rechnung Scannen")
@@ -148,19 +148,11 @@ class ScanWidget(QWidget):
         done_more.setLayout(done_more_layout)
         self.stacked_layout.addWidget(done_more)
 
-        scan_length = QWidget(self)
-        scan_length_layout = QVBoxLayout()
-        scan_normal_length = QPushButton("Bis zu A4 scannen")
-        scan_normal_length.clicked.connect(self._scan_normal_length)
-        scan_length_layout.addWidget(scan_normal_length)
-        scan_extra_long = QPushButton("Bis zu 3x A4 scannen")
-        scan_extra_long.clicked.connect(self._scan_extra_long)
-        scan_length_layout.addWidget(scan_extra_long)
-        scan_back = QPushButton("Zurück")
-        scan_back.clicked.connect(self._show_scanner)
-        scan_length_layout.addWidget(scan_back)
-        scan_length.setLayout(scan_length_layout)
-        self.stacked_layout.addWidget(scan_length)
+        scan_now = QPushButton(
+            "Scan Starten\nRechnung mit Text oben einlegen, dann klicken\nWenn komplett gescannt, auf Scan Fertig klicken"
+        )
+        scan_now.clicked.connect(self._scan_now)
+        self.stacked_layout.addWidget(scan_now)
 
         # Set up timer for auto reset
         self.reset_timer = QTimer(self)
@@ -173,7 +165,7 @@ class ScanWidget(QWidget):
     def _update_iban_correct(self, *_):
         try:
             schwifty.IBAN(self.iban_input.text())
-        except schwifty.exceptions.SchwiftyException as e:
+        except schwifty.exceptions.SchwiftyException:
             self.iban_correct_label.setText(self.IBAN_WRONG_INFO)
         else:
             self.iban_correct_label.setText(self.IBAN_CORRECT_INFO)
@@ -287,19 +279,14 @@ class ScanWidget(QWidget):
             self._retry_startup()
         else:
             self.scan_button.setEnabled(False)
-            self._show_scan_length()
+            self._show_scan_now()
 
     @exc
-    def _show_scan_length(self, *_):
-        self.stacked_layout.setCurrentIndex(self.PAGE_SCAN_LENGTH)
+    def _show_scan_now(self, *_):
+        self.stacked_layout.setCurrentIndex(self.PAGE_SCAN_NOW)
 
     @exc
-    def _scan_normal_length(self, *_):
-        self._show_status(self.SCANNING_STARTING, self.SCAN_START_DURATION)
-        self.scanner.scan(long=False)
-
-    @exc
-    def _scan_extra_long(self, *_):
+    def _scan_now(self, *_):
         self._show_status(self.SCANNING_STARTING, self.SCAN_START_DURATION)
         self.scanner.scan(long=True)
 
@@ -375,8 +362,12 @@ class ScanWidget(QWidget):
 
     @exc
     def _scan_more(self, *_):
-        # Just scan another
-        self._initiate_scan()
+        # Just scan more content
+        if not self.scanner.can_scan():
+            self._retry_startup()
+        else:
+            self.scan_button.setEnabled(False)
+            self._scan_now()
 
     @exc
     def _scan_next(self, *_):
