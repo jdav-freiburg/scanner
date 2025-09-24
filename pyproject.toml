@@ -26,10 +26,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "Mock.GPIO>=0.1",
+    "Mock.GPIO>=0.1.10",
     "pyqt5>=5.15",
-    "black",
-    "isort",
     "ruff",
 ]
 

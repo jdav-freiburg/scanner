@@ -26,3 +26,9 @@ build: dev-sync
     rm -rf dist
     uv build --wheel
     uv build --sdist
+
+dev-run-api: dev-sync
+    cd srvapi && just dev-run
+
+dev-run: dev-sync
+    EMULATE_SCANNER=1 uv run scanapp

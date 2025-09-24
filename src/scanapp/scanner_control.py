@@ -5,9 +5,14 @@ from enum import Enum
 from typing import Callable, Generator
 
 from PIL import Image
-from RPi import GPIO
 
-from scanapp.ds_driver import DSDriver, SSPRequest, XSCRequest
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    import Mock.GPIO as GPIO
+
+from scanapp.ds_driver import DSDriver, DSDriverEmulator, SSPRequest, XSCRequest
+from scanapp.env import EMULATE_SCANNER
 
 PIN_ONOFF = 26
 PIN_BUTTON = 16
@@ -254,7 +259,10 @@ class ScannerControl:
         self.scanner_ready()
 
         print("Initializing USB driver")
-        self.drv = DSDriver()
+        if EMULATE_SCANNER:
+            self.drv = DSDriverEmulator()
+        else:
+            self.drv = DSDriver()
 
     def _power_on(self):
         print("._power_on()")
@@ -312,7 +320,7 @@ class ScannerControl:
         print(".scan_stop()")
         GPIO.output(PIN_PAPER, False)
 
-    drv: DSDriver | None = None
+    drv: DSDriver | DSDriverEmulator | None = None
 
     def _scan(self, duration: float = SCAN_MAX_DURATION):
         print("._scan()")

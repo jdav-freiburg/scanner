@@ -57,6 +57,7 @@ Possible config vars:
 - `MAIL_USER`: (if `SEND_TARGET=mail`) If not empty, use this and the password for authentication.
 - `MAIL_PASSWORD`: (if `SEND_TARGET=mail`) If not empty, use this and the user for authentication.
 - `DISABLE_IBAN_CHECK`: Disable IBAN verification
+- `EMULATE_SCANNER`: Emulate RaspberryPI scanner IO to return a static image
 
 Create the looping startup script:
 

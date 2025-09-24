@@ -22,3 +22,4 @@ MAIL_PORT = os.environ.get("MAIL_PORT", 587 if MAIL_SSL or MAIL_START_TLS else 2
 MAIL_USER = os.environ.get("MAIL_USER")
 MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
 DISABLE_IBAN_CHECK = bool(os.environ.get("DISABLE_IBAN_CHECK", ""))
+EMULATE_SCANNER = bool(os.environ.get("EMULATE_SCANNER", ""))

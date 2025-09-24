@@ -3,12 +3,16 @@ import threading
 import time
 from dataclasses import asdict, dataclass
 from io import BytesIO
+from pathlib import Path
 from typing import Generator, Literal
 
 import usb.core
-import usb.util
 from PIL import Image
-from RPi import GPIO
+
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    import Mock.GPIO as GPIO
 
 PIN_ONOFF = 26
 PIN_BUTTON = 16
@@ -263,6 +267,30 @@ class DSDriver:
         packet = self._user_read(1024, 1000)
         assert packet[0] == 0x00, packet
         assert len(packet) == 0x26, packet
+
+
+class DSDriverEmulator:
+    def __init__(self):
+        pass
+
+    def close(self):
+        pass
+
+    def set_source_d(self, source: Literal[b"ADF"] = b"ADF"):
+        pass
+
+    def abort(self, eject: bool):
+        pass
+
+    def set_source(self, source: Literal[b"ADF"] = b"ADF") -> None:
+        pass
+
+    def scan(self, req: XSCRequest) -> Generator[Image.Image, None, None]:
+        time.sleep(3)
+        yield Image.open(BytesIO((Path(__file__).parent / "testscan.jpg").read_bytes()))
+
+    def set_parameters(self, req: SSPRequest):
+        pass
 
 
 def dbg_usb_scan():
