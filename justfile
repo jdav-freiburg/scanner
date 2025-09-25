@@ -31,4 +31,4 @@ dev-run-api: dev-sync
     cd srvapi && just dev-run
 
 dev-run: dev-sync
-    EMULATE_SCANNER=1 uv run scanapp
+    EMULATE_SCANNER=1 SEND_TARGET=api uv run scanapp

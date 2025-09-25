@@ -155,9 +155,7 @@ class ScanWidget(QWidget):
         scan_now.clicked.connect(self._scan_now)
         self.stacked_layout.addWidget(scan_now)
 
-        success_button = QPushButton(
-            "Senden erfolgreich!\nKlicken um zurückzukehren."
-        )
+        success_button = QPushButton("Senden erfolgreich!\nKlicken um zurückzukehren.")
         success_button.clicked.connect(self._show_scanner)
         self.stacked_layout.addWidget(success_button)
 
@@ -256,7 +254,7 @@ class ScanWidget(QWidget):
         self.scan_button.setEnabled(False)
         self._reset_reset_timer()
         self.scanner.startup()
-    
+
     @exc
     def _show_success(self, *_):
         self.stacked_layout.setCurrentIndex(self.PAGE_SUCCESS)

@@ -73,9 +73,12 @@ class MailSender(QThread):
                 s.login(MAIL_USER, MAIL_PASSWORD)
             s.send_message(msg)
             s.quit()
+            print("Successfully sent mail")
         except Exception as e:
+            print(f"Failed to send mail: {e!r}")
             os.makedirs("failed_mails", exist_ok=True)
             filename = f"failed_mails/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.eml"
+            print(f"Saving to {filename}")
             with open(filename, "wb") as wf:
                 wf.write(msg.as_bytes())
             self.failure.emit(str(e), filename)

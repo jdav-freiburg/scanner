@@ -17,11 +17,13 @@ dependencies = [
     "pydantic>=2.10.5",
     "python-dotenv>=1.0.0",
     "aiosmtplib>=3.0.2",
+    "fpdf2>=2.8.4",
 ]
 
 [dependency-groups]
 dev = [
     "ruff",
+    "aiosmtpd",
 ]
 
 [project.scripts]

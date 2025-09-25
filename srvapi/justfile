@@ -28,7 +28,10 @@ build: dev-sync
     uv build --sdist
 
 dev-run: dev-sync
-    uv run scanapp
+    MAIL_PORT=1025 uv run scanapp
+
+dev-run-smtpd: dev-sync
+    uv run -m aiosmtpd -n -l localhost:1025
 
 docker-build:
     docker build . --file srvapi.Dockerfile --tag ghcr.io/jdav-freiburg/scanner-srvapi:$(date +%Y-%m-%d)

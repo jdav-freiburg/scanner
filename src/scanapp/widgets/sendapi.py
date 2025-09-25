@@ -48,7 +48,9 @@ class ApiSender(QThread):
                 files=self.files,
             )
             r.raise_for_status()
+            print("Successfully sent mail via API")
         except Exception as e:
+            print(f"Failed to send mail via API: {e!r}")
             os.makedirs("failed_data", exist_ok=True)
             filename_base = f"failed_data/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
             with open(f"{filename_base}.json", "w") as wf:

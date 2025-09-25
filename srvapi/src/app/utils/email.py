@@ -1,8 +1,12 @@
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from email.message import EmailMessage
+from io import BytesIO
 
 from aiosmtplib import SMTP
+from fpdf import FPDF
+from PIL import Image
 
 from app.models.bill import BillPayload
 
@@ -14,6 +18,7 @@ MAIL_HOST = os.environ.get("MAIL_HOST", "localhost")
 MAIL_PORT = os.environ.get("MAIL_PORT", 587 if MAIL_SSL or MAIL_START_TLS else 25)
 MAIL_USER = os.environ.get("MAIL_USER")
 MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+CONVERT_TO_PDF = bool(os.environ.get("CONVERT_TO_PDF", "1"))
 
 
 @dataclass
@@ -22,6 +27,24 @@ class Attachment:
     mime_main: str
     mime_sub: str
     data: bytes
+
+
+def to_pdf(payload: BillPayload, attachments: list[Attachment]) -> bytes:
+    pdf = FPDF(unit="pt")
+    pdf.add_page(format="A4")
+    pdf.set_font("Arial", size=14)
+    pdf.text(50, 65, f"Rechnung eingereicht von: {payload.name}")
+    pdf.text(50, 95, f"Zweck: {payload.purpose}")
+    pdf.text(50, 125, f"IBAN: {payload.iban}")
+
+    for attachment in attachments:
+        with BytesIO(attachment.data) as bio:
+            with Image.open(bio) as img:
+                width, height = img.size
+            pdf.add_page(orientation="P", format=(width, height))
+            bio.seek(0)
+            pdf.image(bio, x=0, y=0, w=width, h=height)
+    return pdf.output()
 
 
 async def send_email(payload: BillPayload, attachments: list[Attachment]) -> bool:
@@ -46,13 +69,24 @@ async def send_email(payload: BillPayload, attachments: list[Attachment]) -> boo
     msg["Subject"] = f"Neue Rechnung von {payload.name}"
     msg["From"] = MAIL_FROM
     msg["To"] = MAIL_TO
-    for attachment in attachments:
+    if CONVERT_TO_PDF:
+        raw_pdf = to_pdf(payload, attachments)
         msg.add_attachment(
-            attachment.data,
-            maintype=attachment.mime_main,
-            subtype=attachment.mime_sub,
-            filename=attachment.name,
+            raw_pdf,
+            maintype="application",
+            subtype="pdf",
+            filename=f"scan-{datetime.now().strftime('%Y-%m-%d_%H:%M')}.pdf",
         )
+        with open("dump.pdf", "wb") as wf:
+            wf.write(raw_pdf)
+    else:
+        for attachment in attachments:
+            msg.add_attachment(
+                attachment.data,
+                maintype=attachment.mime_main,
+                subtype=attachment.mime_sub,
+                filename=attachment.name,
+            )
 
     try:
         smtp = SMTP(
